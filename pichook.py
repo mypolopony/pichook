@@ -3,15 +3,23 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2015-12-22 10:40:23
+# @Last Modified time: 2016-01-11 00:55:25
 
 # TODO:
 # For stream: 
-# 	for line in tailer.follow(open('/Users/mypolopony/Downloads/irc.undernet.org (DC7C9)/Channels/#0!!!!!!!!!!younggirlsex/2015-12-22.txt')):
+# 	for line in tailer.follow(open(filename)):
 #		print(line)
+#
+# Domains:
+# Imagetwist: Probably not worth it, most of these seem bunk
+# Picpaste: I imagine this might be well guarded
 
 import re
 import exifread
+import glob
+import operator
+import logging
+import requests
 
 # Home for wayward variables
 filetype = 'jpg'
@@ -23,7 +31,12 @@ def writebytes(data,name,filetype):
 		o.write(data)
 
 def getdomain(text):
-	return domain.search(text).group(1)
+	dom = domain.search(text).group(1)
+
+	if 'imagevenue.com' in dom:
+		dom = 'imagevenue.com'
+
+	return dom
 
 def readexif(filename):
 	with open(filename,'rb') as f:
@@ -32,29 +45,83 @@ def readexif(filename):
 	# tags['GPS GPSLongitude'].values will return degrees, minutes and seconds
 	return tags
 
-# Imagevenue
-# line = 'http://img173.imagevenue.com/img.php?image=32508_FN015C_123_94lo.JPG'
-filename = re.search('(?:=)(.+)',line).group(1)
-prefix = re.search('(?:img)+[^.]+',line).group(0)
+def imagevenue(url):
+	# url = 'http://img173.imagevenue.com/img.php?image=32508_FN015C_123_94lo.JPG'
+	filename = re.search('(?:=)(.+)',url).group(1)
+	prefix = re.search('(?:img)+[^.]+',url).group(0)
 
-# First pass
-payload = {'image':filename}
-uri = 'http://{prefix}.imagevenue.com/img.php'.format(prefix=re.search('img[0-9]+',line).group(0))
-r = requests.get(uri,params=payload,headers=headers)
+	# First pass
+	payload = {'image':filename}
+	uri = 'http://{prefix}.imagevenue.com/img.php'.format(prefix=re.search('img[0-9]+',url).group(0))
+	r = requests.get(uri,params=payload,headers=headers)
 
-# Second pass
-realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','')
-uri = 'http://{prefix}.imagevenue.com/'.format(prefix=prefix) + realfilename
-r = requests.get(uri,headers=headers)
-writebytes(r.content,getdomain(line).replace(prefix+'.','') + realfilename,filetype)
+	# Second pass
+	realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','')
+	uri = 'http://{prefix}.imagevenue.com/'.format(prefix=prefix) + realfilename
+	r = requests.get(uri,headers=headers)
+
+	writebytes(r.content,getdomain(url) + '/' + realfilename,filetype)
+
+def grusom(url):
+	# url = 'http://grusom.org/index.php?p=image&id=8582&n=lol2.jpg'
+	pattern = re.compile('(?:[id=])[0-9]+')
+
+	id = pattern.search(url).group(0)[1:]
+	uri = 'http://grusom.org/p.php'
+	payload = {'id': id, 't': 'gi'}
+	r = requests.get(uri,params=payload,headers=headers)
+	writebytes(r.content,getdomain(url) + '/' + id,filetype)
+
+def rawlink(url):
+	# url = 
+	r = requests.get(url)
+	writebytes(r.content,'raw/' + url.split('/')[-1])
+
+def main():
+	# This is as particular setup for the Textual client's file structure and my
+	# personal setup
+	baseurl = '/Users/mypolopony/Downloads'
+	server = 'irc.undernet.org'
+	sources = glob.glob('{base}/{sv}*/Channels/**/*.txt'.format(base=baseurl,sv=server))
+
+	domainset = dict()
+
+	pattern = 'http:\/\/[^ |\\\n|\)]+'	# extract potential links
+	httpfind = re.compile(pattern)
+	for so in sources:
+		with open(so,'r') as logfile:
+			for line in logfile:
+				link = httpfind.search(line)
+				if link:
+					link = link.group(0)
+					if filetype in link:
+						domain = getdomain(link)
+
+						# Stupid imagevenue subdomain hack
+						# This could probably be much bette
+
+						if domain in domainset.keys():
+							domainset[domain] += 1
+						else:
+							domainset[domain] = 1
+
+						print(domain)
+
+						if 'grusom.org' in domain:
+							grusom(link)
+						elif 'imagevenue.com' in domain:
+							imagevenue(link)
+						else:
+							try:
+								rawlink(link)
+							except:
+								logging.warning('Rawlink failed: {l}'.format(l=link))
+
+	domainset = sorted(domainset.items(), key=operator.itemgetter(1), reverse=True)
+	print('Total Tally:')
+	for ds in domainset:
+		print('{d}:\t{num}'.format(d=ds[0], num=ds[1]))
 
 
-# Grusom
-# line = 'http://grusom.org/index.php?p=image&id=8582&n=lol2.jpg'
-pattern = re.compile('(?:[id=])[0-9]+')
-
-id = pattern.search(line).group(0)[1:]
-uri = 'http://grusom.org/p.php'
-payload = {'id': id, 't': 'gi'}
-r = requests.get(uri,params=payload,headers=headers)
-writebytes(r.content,getdomain(line) + id,filetype)
+if __name__ == '__main__':
+    main()
