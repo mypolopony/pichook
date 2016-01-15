@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-11 00:55:25
+# @Last Modified time: 2016-01-14 18:25:02
 
 # TODO:
 # For stream: 
@@ -31,10 +31,10 @@ def writebytes(data,name,filetype):
 		o.write(data)
 
 def getdomain(text):
-	dom = domain.search(text).group(1)
-
-	if 'imagevenue.com' in dom:
+	if 'imagevenue.com' in text:
 		dom = 'imagevenue.com'
+	else:
+		dom = domain.search(text).group(1)
 
 	return dom
 
@@ -56,11 +56,14 @@ def imagevenue(url):
 	r = requests.get(uri,params=payload,headers=headers)
 
 	# Second pass
-	realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','')
+	realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','').replace('jpg','')
 	uri = 'http://{prefix}.imagevenue.com/'.format(prefix=prefix) + realfilename
 	r = requests.get(uri,headers=headers)
 
-	writebytes(r.content,getdomain(url) + '/' + realfilename,filetype)
+	shortfn = realfilename.split('/')[-1]
+	writebytes(r.content,getdomain(getdomain(url)) + '/' + shortfn, filetype)
+
+	logging.debug('Wrote: {fn}'.format(fn = shortfn))
 
 def grusom(url):
 	# url = 'http://grusom.org/index.php?p=image&id=8582&n=lol2.jpg'
@@ -105,22 +108,24 @@ def main():
 						else:
 							domainset[domain] = 1
 
-						print(domain)
-
 						if 'grusom.org' in domain:
-							grusom(link)
+							#grusom(link)
+							pass
 						elif 'imagevenue.com' in domain:
 							imagevenue(link)
 						else:
+							pass
+							'''
 							try:
 								rawlink(link)
 							except:
 								logging.warning('Rawlink failed: {l}'.format(l=link))
+							'''
 
 	domainset = sorted(domainset.items(), key=operator.itemgetter(1), reverse=True)
-	print('Total Tally:')
+	logging.info('Total Tally:')
 	for ds in domainset:
-		print('{d}:\t{num}'.format(d=ds[0], num=ds[1]))
+		logging.info('{d}:\t{num}'.format(d=ds[0], num=ds[1]))
 
 
 if __name__ == '__main__':
