@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-14 18:25:02
+# @Last Modified time: 2016-01-15 01:42:21
 
 # TODO:
 # For stream: 
@@ -20,11 +20,14 @@ import glob
 import operator
 import logging
 import requests
+import datetime
 
-# Home for wayward variables
+# Home for wayward global variables
 filetype = 'jpg'
 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1'}
 domain = re.compile('(?:http://)([^/]+)')
+timeformat = '%Y-%m-%d%H:%M:%S%Z'
+logging.basicConfig(filename='{tf}.log'.format(tf=datetime.date.today().strftime(timeformat)),level=logging.DEBUG)
 
 def writebytes(data,name,filetype):
 	with open(name + '.' + filetype,'wb') as o:
@@ -56,11 +59,11 @@ def imagevenue(url):
 	r = requests.get(uri,params=payload,headers=headers)
 
 	# Second pass
-	realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','').replace('jpg','')
+	realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','')
 	uri = 'http://{prefix}.imagevenue.com/'.format(prefix=prefix) + realfilename
 	r = requests.get(uri,headers=headers)
 
-	shortfn = realfilename.split('/')[-1]
+	shortfn = realfilename.split('/')[-1].lower().replace('.jpg','')
 	writebytes(r.content,getdomain(getdomain(url)) + '/' + shortfn, filetype)
 
 	logging.debug('Wrote: {fn}'.format(fn = shortfn))
