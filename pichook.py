@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-16 12:57:56
+# @Last Modified time: 2016-01-16 12:58:29
 
 # TODO:
 # For stream: 
@@ -125,7 +125,7 @@ def main():
 									rawlink(link)
 								except:
 									logging.warning('Rawlink failed: {l}'.format(l=link))
-							'''
+								'''
 						except:
 							logging.error('Capture failed for {l}'.format(l=link))
 
