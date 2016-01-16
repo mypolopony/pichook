@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-15 01:42:21
+# @Last Modified time: 2016-01-16 12:57:56
 
 # TODO:
 # For stream: 
@@ -26,7 +26,7 @@ import datetime
 filetype = 'jpg'
 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1'}
 domain = re.compile('(?:http://)([^/]+)')
-timeformat = '%Y-%m-%d%H:%M:%S%Z'
+timeformat = '%Y-%m-%d-%H:%M:%S'
 logging.basicConfig(filename='{tf}.log'.format(tf=datetime.date.today().strftime(timeformat)),level=logging.DEBUG)
 
 def writebytes(data,name,filetype):
@@ -52,6 +52,7 @@ def imagevenue(url):
 	# url = 'http://img173.imagevenue.com/img.php?image=32508_FN015C_123_94lo.JPG'
 	filename = re.search('(?:=)(.+)',url).group(1)
 	prefix = re.search('(?:img)+[^.]+',url).group(0)
+	logging.debug('Fetching: {fn}'.format(fn = filename))
 
 	# First pass
 	payload = {'image':filename}
@@ -111,19 +112,22 @@ def main():
 						else:
 							domainset[domain] = 1
 
-						if 'grusom.org' in domain:
-							#grusom(link)
-							pass
-						elif 'imagevenue.com' in domain:
-							imagevenue(link)
-						else:
-							pass
+						try:
+							if 'grusom.org' in domain:
+								#grusom(link)
+								pass
+							elif 'imagevenue.com' in domain:
+								imagevenue(link)
+							else:
+								pass
+								'''
+								try:
+									rawlink(link)
+								except:
+									logging.warning('Rawlink failed: {l}'.format(l=link))
 							'''
-							try:
-								rawlink(link)
-							except:
-								logging.warning('Rawlink failed: {l}'.format(l=link))
-							'''
+						except:
+							logging.error('Capture failed for {l}'.format(l=link))
 
 	domainset = sorted(domainset.items(), key=operator.itemgetter(1), reverse=True)
 	logging.info('Total Tally:')
