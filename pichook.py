@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-16 12:58:29
+# @Last Modified time: 2016-01-21 08:04:43
 
 # TODO:
 # For stream: 
@@ -21,13 +21,15 @@ import operator
 import logging
 import requests
 import datetime
+import redis
 
 # Home for wayward global variables
 filetype = 'jpg'
 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1'}
 domain = re.compile('(?:http://)([^/]+)')
 timeformat = '%Y-%m-%d-%H:%M:%S'
-logging.basicConfig(filename='{tf}.log'.format(tf=datetime.date.today().strftime(timeformat)),level=logging.DEBUG)
+logging.basicConfig(filename='{tf}.log'.format(tf=datetime.datetime.now().strftime(timeformat),level=logging.DEBUG))
+redisserver = redis.StrictRedis(host='localhost', port=6379, db=7)  # Obviously 7 is arbitrary
 
 def writebytes(data,name,filetype):
 	with open(name + '.' + filetype,'wb') as o:
@@ -51,23 +53,28 @@ def readexif(filename):
 def imagevenue(url):
 	# url = 'http://img173.imagevenue.com/img.php?image=32508_FN015C_123_94lo.JPG'
 	filename = re.search('(?:=)(.+)',url).group(1)
-	prefix = re.search('(?:img)+[^.]+',url).group(0)
-	logging.debug('Fetching: {fn}'.format(fn = filename))
 
-	# First pass
-	payload = {'image':filename}
-	uri = 'http://{prefix}.imagevenue.com/img.php'.format(prefix=re.search('img[0-9]+',url).group(0))
-	r = requests.get(uri,params=payload,headers=headers)
+	if not(redisserver.get(filename)):
+		prefix = re.search('(?:img)+[^.]+',url).group(0)
+		logging.debug('Fetching: {fn}'.format(fn = filename))
 
-	# Second pass
-	realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','')
-	uri = 'http://{prefix}.imagevenue.com/'.format(prefix=prefix) + realfilename
-	r = requests.get(uri,headers=headers)
+		# First pass
+		payload = {'image':filename}
+		uri = 'http://{prefix}.imagevenue.com/img.php'.format(prefix=re.search('img[0-9]+',url).group(0))
+		r = requests.get(uri,params=payload,headers=headers)
 
-	shortfn = realfilename.split('/')[-1].lower().replace('.jpg','')
-	writebytes(r.content,getdomain(getdomain(url)) + '/' + shortfn, filetype)
+		# Second pass
+		realfilename = re.search('(?:alt=")[^"]+',str(r.content)).group().replace('alt="','')
+		uri = 'http://{prefix}.imagevenue.com/'.format(prefix=prefix) + realfilename
+		r = requests.get(uri,headers=headers)
 
-	logging.debug('Wrote: {fn}'.format(fn = shortfn))
+		shortfn = realfilename.split('/')[-1].lower().replace('.jpg','')
+		writebytes(r.content,getdomain(getdomain(url)) + '/' + shortfn, filetype)
+
+		redisserver.set(filename,realfilename)
+		logging.debug('Wrote: {fn}'.format(fn = shortfn))
+	else:
+		logging.debug('Skipping existing: {fn}'.format(fn=filename))
 
 def grusom(url):
 	# url = 'http://grusom.org/index.php?p=image&id=8582&n=lol2.jpg'
@@ -120,11 +127,8 @@ def main():
 								imagevenue(link)
 							else:
 								pass
-								'''
-								try:
-									rawlink(link)
-								except:
-									logging.warning('Rawlink failed: {l}'.format(l=link))
+								'''									
+								rawlink(link)
 								'''
 						except:
 							logging.error('Capture failed for {l}'.format(l=link))
