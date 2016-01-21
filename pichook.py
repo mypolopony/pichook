@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-21 08:04:43
+# @Last Modified time: 2016-01-21 10:51:23
 
 # TODO:
 # For stream: 
@@ -106,7 +106,7 @@ def main():
 		with open(so,'r') as logfile:
 			for line in logfile:
 				link = httpfind.search(line)
-				if link:
+				if link and not(redisserver.get(link)):
 					link = link.group(0)
 					if filetype in link:
 						domain = getdomain(link)
@@ -132,6 +132,7 @@ def main():
 								'''
 						except:
 							logging.error('Capture failed for {l}'.format(l=link))
+							redisserver.set(link,0)
 
 	domainset = sorted(domainset.items(), key=operator.itemgetter(1), reverse=True)
 	logging.info('Total Tally:')
