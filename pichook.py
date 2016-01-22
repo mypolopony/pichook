@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-21 10:51:23
+# @Last Modified time: 2016-01-21 17:20:26
 
 # TODO:
 # For stream: 
@@ -22,6 +22,7 @@ import logging
 import requests
 import datetime
 import redis
+import traceback
 
 # Home for wayward global variables
 filetype = 'jpg'
@@ -44,6 +45,16 @@ def getdomain(text):
 	return dom
 
 def readexif(filename):
+	'''
+	# To use, after a glob. . .
+	for gi in g:
+		try:
+			logging.debug(gi)
+			logging.debug(readexif(gi))
+		except:
+			logging.error('ERROR ON {gi}'.format(gi=gi))
+	'''
+	
 	with open(filename,'rb') as f:
 		tags = exifread.process_file(f)
 	# For reference, as per http://www.opanda.com/en/pe/help/gps.html
@@ -130,7 +141,7 @@ def main():
 								'''									
 								rawlink(link)
 								'''
-						except:
+						except Exception as e:
 							logging.error('Capture failed for {l}'.format(l=link))
 							redisserver.set(link,0)
 
