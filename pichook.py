@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-21 17:27:22
+# @Last Modified time: 2016-01-22 08:40:07
 
 # TODO:
 # For stream: 
@@ -109,6 +109,7 @@ def main():
 	# personal setup
 	baseurl = '/Users/mypolopony/Downloads'
 	server = 'irc.undernet.org'
+	# This is awful tricky:
 	sources = glob.glob('{base}/{sv}*/Channels/**/*.txt'.format(base=baseurl,sv=server))
 
 	domainset = dict()
