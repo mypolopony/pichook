@@ -3,7 +3,7 @@
 # @Author: mypolopony
 # @Date:   2015-12-20 23:52:10
 # @Last Modified by:   mypolopony
-# @Last Modified time: 2016-01-21 17:20:26
+# @Last Modified time: 2016-01-21 17:27:22
 
 # TODO:
 # For stream: 
@@ -54,7 +54,7 @@ def readexif(filename):
 		except:
 			logging.error('ERROR ON {gi}'.format(gi=gi))
 	'''
-	
+
 	with open(filename,'rb') as f:
 		tags = exifread.process_file(f)
 	# For reference, as per http://www.opanda.com/en/pe/help/gps.html
@@ -62,7 +62,7 @@ def readexif(filename):
 	return tags
 
 def imagevenue(url):
-	# url = 'http://img173.imagevenue.com/img.php?image=32508_FN015C_123_94lo.JPG'
+	# url = 'http://##PREFIX##.imagevenue.com/##SUBFIX##/##FILENAME##.jpg'
 	filename = re.search('(?:=)(.+)',url).group(1)
 
 	if not(redisserver.get(filename)):
@@ -98,7 +98,9 @@ def grusom(url):
 	writebytes(r.content,getdomain(url) + '/' + id,filetype)
 
 def rawlink(url):
-	# url = 
+	'''
+	Base Case
+	'''
 	r = requests.get(url)
 	writebytes(r.content,'raw/' + url.split('/')[-1])
 
